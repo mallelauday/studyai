@@ -38,6 +38,7 @@ def create_app() -> Flask:
 
     if not cors_origins:
         cors_origins = [
+            "https://studyai-navy.vercel.app",
             "http://localhost:5173",
             "http://127.0.0.1:5173",
             "http://localhost:3000",
@@ -45,9 +46,7 @@ def create_app() -> Flask:
 
     CORS(
         app,
-        origins=cors_origins,
-        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+        resources={r"/*": {"origins": cors_origins}},
         supports_credentials=True,
     )
 
@@ -166,6 +165,7 @@ def _register_request_hooks(app: Flask) -> None:
 
     @app.before_request
     def log_request():
+        print(request.method, request.path)
         logger.debug("→ %s %s", request.method, request.path)
 
     @app.after_request

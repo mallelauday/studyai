@@ -113,8 +113,33 @@ export function StudyPlanner() {
   // Export PDF study plan
   const handleExportPDF = async () => {
     try {
-      const res = await api.exportPDF("study-plan");
-      const blob = new Blob([res.data], { type: "application/pdf" });
+      setError('');
+      setSuccess('');
+      const response = await api.exportPDF("study-plan");
+
+      // Debug validation as required by Step 4
+      console.log(response.headers["content-type"]);
+      console.log(response.data);
+
+      const contentType = response.headers["content-type"] || "";
+      if (!contentType.includes("application/pdf")) {
+        let errorMessage = "Failed to export PDF. Invalid file format received.";
+        if (response.data instanceof Blob) {
+          try {
+            const text = await response.data.text();
+            const parsed = JSON.parse(text);
+            if (parsed && parsed.error) {
+              errorMessage = parsed.error;
+            }
+          } catch (e) {
+            // Error parsing json
+          }
+        }
+        setError(errorMessage);
+        return;
+      }
+
+      const blob = new Blob([response.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       
       const a = document.createElement("a");
@@ -123,9 +148,10 @@ export function StudyPlanner() {
       a.click();
       
       window.URL.revokeObjectURL(url);
+      setSuccess("PDF exported successfully!");
     } catch (err) {
       console.error('Failed to export PDF:', err);
-      alert('Failed to download PDF export.');
+      setError('Failed to download PDF export.');
     }
   };
 

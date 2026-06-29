@@ -36,12 +36,30 @@ def init_firebase():
 
         # Check file exists
         if not os.path.exists(key_path):
-            logger.error("❌ Firebase key not found at: %s", key_path)
-            _firebase_available = False
-            return
-
-        # Load credentials
-        cred = credentials.Certificate(key_path)
+            # Try to build from environment variables
+            from config import get_config
+            Config = get_config()
+            if Config.is_firebase_configured():
+                logger.info("Initializing Firebase using environment variables...")
+                cred = credentials.Certificate({
+                    "type": "service_account",
+                    "project_id": Config.FIREBASE_PROJECT_ID,
+                    "private_key_id": Config.FIREBASE_PRIVATE_KEY_ID,
+                    "private_key": Config.FIREBASE_PRIVATE_KEY,
+                    "client_email": Config.FIREBASE_CLIENT_EMAIL,
+                    "client_id": Config.FIREBASE_CLIENT_ID,
+                    "auth_uri": Config.FIREBASE_AUTH_URI,
+                    "token_uri": Config.FIREBASE_TOKEN_URI,
+                    "auth_provider_x509_cert_url": Config.FIREBASE_AUTH_PROVIDER_CERT_URL,
+                    "client_x509_cert_url": Config.FIREBASE_CLIENT_CERT_URL,
+                })
+            else:
+                logger.error("❌ Firebase key not found at: %s and environment variables are incomplete", key_path)
+                _firebase_available = False
+                return
+        else:
+            # Load credentials
+            cred = credentials.Certificate(key_path)
 
         # Initialize Firebase only once
         if not firebase_admin._apps:

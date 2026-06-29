@@ -6,15 +6,23 @@
 
 import axios from "axios";
 
-// ── Environment-based API Base URL ───────────────────────────
-const BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  "https://your-render-backend.onrender.com";
+// Dynamic API URL resolution with fallback and normalization
+let envApiUrl = import.meta.env.VITE_API_URL || "https://studyai-iz8i.onrender.com";
+if (envApiUrl && !envApiUrl.endsWith("/api") && !envApiUrl.endsWith("/api/")) {
+    envApiUrl = envApiUrl.endsWith("/") ? `${envApiUrl}api` : `${envApiUrl}/api`;
+}
+const API_BASE_URL = envApiUrl;
 
-// Ensure base URL points to /api safely, avoiding duplication
-const API_BASE_URL = BASE_URL.endsWith("/api")
-  ? BASE_URL
-  : `${BASE_URL}/api`;
+export const api = axios.create({
+    baseURL: API_BASE_URL,
+    headers: {
+        "Content-Type": "application/json",
+    },
+    withCredentials: true,
+    timeout: 30000,
+});
+
+export const apiClient = api;
 
 const ACCESS_KEY = "studyai_access_token";
 const REFRESH_KEY = "studyai_refresh_token";
@@ -34,17 +42,11 @@ export const tokenStore = {
   },
 };
 
-// Axios instance (IMPORTANT)
-export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// Request interceptor — attach Bearer token
-apiClient.interceptors.request.use(
+// Request interceptor — attach Bearer token and debug logging
+api.interceptors.request.use(
   (config) => {
+    console.log("API URL:", import.meta.env.VITE_API_URL);
+    console.log("Request:", config.url, config.data || config.params || null);
     const token = tokenStore.getAccess();
     if (token) {
       config.headers["Authorization"] = `Bearer ${token}`;
@@ -94,7 +96,7 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Debug interceptor: single-line URL and message logs (avoiding full object spam)
+    console.error("API Error:", error);
     console.error("API ERROR URL:", error?.config?.url || "unknown URL");
     console.error("API ERROR MSG:", error?.message || error);
 
@@ -215,9 +217,8 @@ apiClient.updateStudyPlan = (days) => apiClient.put("/study-plan", { days });
 apiClient.exportPDF = async (type = "study-plan", id = "") => {
   const response = await apiClient.get("/export/pdf", {
     params: { type, id },
-    responseType: "arraybuffer"
+    responseType: "blob"
   });
-  response.blob = async () => response.data;
   return response;
 };
 

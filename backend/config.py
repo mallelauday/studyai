@@ -74,6 +74,7 @@ class Config:
         for origin in os.getenv("CORS_ORIGINS", "").split(",")
         if origin.strip()
     ] or [
+        "https://studyai-navy.vercel.app",
         "http://localhost:3000",
         "http://localhost:5173",
         "http://127.0.0.1:3000",
